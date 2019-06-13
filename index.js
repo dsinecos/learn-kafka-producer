@@ -23,6 +23,12 @@ const producer = new Kafka.Producer({
 // Create Topic on Kafka Cluster
 const topicName = 'first_topic';
 
+// Setup listener to receive errors
+producer.on('event.error', (err) => {
+  debug('Error');
+  debug(err);
+})
+
 // Setup listener to receive delivery-reports
 producer.on('delivery-report', (err, report) => {
   if (err) {
