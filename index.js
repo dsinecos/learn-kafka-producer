@@ -7,17 +7,37 @@ debug(`Supported features ${Kafka.features}`);
 debug(`librdkafka version ${Kafka.librdkafkaVersion}`);
 
 // Configure a Producer
-const producer = new Kafka.HighLevelProducer({
+const producer = new Kafka.Producer({
   // Allows to correlate requests on the broker with the respective Producer
   'client.id': "demo-producer",
   // Bootstrap server is used to fetch the full set of brokers from the cluster &
   // relevant metadata
   'bootstrap.servers': 'localhost:9092', // OR 'metadata.broker.list': 'localhost:9092'
+  // Enable to receive delivery reports for messages
+  'dr_cb': true,
+  // Enable to receive message payload in delivery reports
+  'dr_msg_cb': true,
 });
 
 // Topic has been already created using Kafka CLI
 // Create Topic on Kafka Cluster
 const topicName = 'first_topic';
+
+// Setup listener to receive delivery-reports
+producer.on('delivery-report', (err, report) => {
+  if (err) {
+    debug('Error delivering messaage');
+    debug(err)
+    return;
+  }
+
+  debug(`Delivery-report: ${JSON.stringify(report, null, '  ')}`);
+})
+
+// To receive delivery reports the producer needs to be polled at regular intervals
+// Configures polling the producer for delivery reports every 1000 ms
+producer.setPollInterval(1000);
+// producer.setPollInterval(0) to disable polling
 
 // The 'ready' event is emitted when the Producer is ready to send messages
 producer.on('ready', function (arg) {
@@ -46,37 +66,35 @@ producer.on('ready', function (arg) {
 
   // Iterate and Publish 10 Messages to the Kafka Topic
   for (let i = 1; i <= maxMessages; i++) {
-    
+
     // Message to be sent must be a Buffer
     let value = Buffer.from('value-' + i);
-    
+
     // The partitioners shipped with Kafka guarantee that all messages with the same non-empty
     // key will be sent to the same partition. If no key is provided, then the partition is 
     // selected in a round-robin fashion to ensure an even distribution across the topic 
     // partitions
     let key = "key-" + i;
-    
+
     // If a partition is set, the messages will be routed to the defined Topic-Partition
     // If partition is set to -1, librdkafka will use the default partitioner
     let partition = -1;
-    
+
     // If the Broker version supports adding a timestamp, it'll be added
     let timestamp = Date.now();
 
-    producer.produce(
-      topicName, 
-      null, // Partition is set to null, 
-      value, 
-      null, // Key is set to null resulting in a Round-Robin distribution of messages
-      timestamp, 
-      (err, offset) => { // Callback to receive delivery reports for messages
-      if (err) {
-        debug('Error producing message');
-        debug(err)
-      }
+    // Opaque token gets passed to the delivery reports and can be used to
+    // correlate messages against their respective delivery reports
+    let opaqueToken = `opaque::${i}`;
 
-      debug(`Offset: \n ${offset}`) // Offset of the committed message is logged
-    });
+    producer.produce(
+      topicName,
+      null, // Partition is set to null, 
+      value,
+      null, // Key is set to null resulting in a Round-Robin distribution of messages
+      timestamp,
+      opaqueToken
+    );
   }
 });
 
