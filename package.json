@@ -3,5 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "author": "Divyanshu Singh <dsinecos@gmail.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "debug": "^4.1.1",
+    "node-rdkafka": "^2.7.0"
+  }
 }
