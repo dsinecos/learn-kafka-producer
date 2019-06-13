@@ -17,11 +17,21 @@ const producer = new Kafka.Producer({
   'dr_cb': true,
   // Enable to receive message payload in delivery reports
   'dr_msg_cb': true,
+  // Enable to receive events from `librdkafka`
+  'event_cb': true,
+  // Enable to receive logs from `librdkafka`
+  'debug': ['all'],
 });
 
 // Topic has been already created using Kafka CLI
 // Create Topic on Kafka Cluster
 const topicName = 'first_topic';
+
+// Setup listener to receive logs
+producer.on('event.log', (log) => {
+  debug('Log received');
+  debug(log)
+})
 
 // Setup listener to receive errors
 producer.on('event.error', (err) => {
