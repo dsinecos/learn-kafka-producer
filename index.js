@@ -1,3 +1,6 @@
+// Configure the number of libuv threads being used
+process.env.UV_THREADPOOL_SIZE = 8;
+
 const Kafka = require('node-rdkafka');
 const debug = require('debug')('kafka:producer');
 
@@ -18,9 +21,11 @@ const producer = new Kafka.Producer({
   // Enable to receive message payload in delivery reports
   'dr_msg_cb': true,
   // Enable to receive events from `librdkafka`
-  'event_cb': true,
+  'event_cb': false,
   // Enable to receive logs from `librdkafka`
   'debug': ['all'],
+  // Configure to wait at most 5 seconds for batching before sending messages
+  'linger.ms': 2000
 });
 
 // Topic has been already created using Kafka CLI
@@ -52,7 +57,7 @@ producer.on('delivery-report', (err, report) => {
 
 // To receive delivery reports the producer needs to be polled at regular intervals
 // Configures polling the producer for delivery reports every 1000 ms
-producer.setPollInterval(1000);
+// producer.setPollInterval(10);
 // producer.setPollInterval(0) to disable polling
 
 // The 'ready' event is emitted when the Producer is ready to send messages
@@ -78,7 +83,7 @@ producer.on('ready', function (arg) {
     debug(metadata);
   });
 
-  let maxMessages = 5
+  let maxMessages = 8;
 
   // Iterate and Publish 10 Messages to the Kafka Topic
   for (let i = 1; i <= maxMessages; i++) {
@@ -111,6 +116,15 @@ producer.on('ready', function (arg) {
       timestamp,
       opaqueToken
     );
+    producer.flush(5000, (err) => {
+      if (err) {
+        debug('Error sending messages');
+        debug(err);
+        return;
+      }
+      debug('Message sent');
+    })
+    // debug('Executed synchronously or asynchronously');
   }
 });
 
