@@ -1,6 +1,3 @@
-// Configure the number of libuv threads being used
-process.env.UV_THREADPOOL_SIZE = 8;
-
 const Kafka = require('node-rdkafka');
 const debug = require('debug')('kafka:producer');
 
@@ -24,13 +21,20 @@ const producer = new Kafka.Producer({
   'event_cb': false,
   // Enable to receive logs from `librdkafka`
   'debug': ['all'],
-  // Configure to wait at most 5 seconds for batching before sending messages
-  'linger.ms': 2000
-});
+  // Configure the max number of retries for temporary errors
+  'message.send.max.retries': 100000,
+  // Configure backoff time in ms before retrying a message
+  'retry.backoff.ms': 1000,
+},
+{
+  // Set the acknowledgement level for Kafka Producer
+  'acks': 'all',
+}
+);
 
 // Topic has been already created using Kafka CLI
 // Create Topic on Kafka Cluster
-const topicName = 'first_topic';
+const topicName = 'replicated_topic';
 
 // Setup listener to receive logs
 producer.on('event.log', (log) => {
@@ -57,7 +61,7 @@ producer.on('delivery-report', (err, report) => {
 
 // To receive delivery reports the producer needs to be polled at regular intervals
 // Configures polling the producer for delivery reports every 1000 ms
-// producer.setPollInterval(10);
+producer.setPollInterval(100);
 // producer.setPollInterval(0) to disable polling
 
 // The 'ready' event is emitted when the Producer is ready to send messages
@@ -68,7 +72,7 @@ producer.on('ready', function (arg) {
   // Log Metadata once Producer connects to Kafka Cluster
   const opts = {
     // Topic for which metadata is to be retrieved
-    topic: 'first_topic',
+    topic: 'replicated_topic',
     // Max time, in ms, to try to fetch metadata before timing out. Defaults to 3000
     timeout: 10000
   };
@@ -83,7 +87,7 @@ producer.on('ready', function (arg) {
     debug(metadata);
   });
 
-  let maxMessages = 8;
+  let maxMessages = 5;
 
   // Iterate and Publish 10 Messages to the Kafka Topic
   for (let i = 1; i <= maxMessages; i++) {
@@ -116,15 +120,6 @@ producer.on('ready', function (arg) {
       timestamp,
       opaqueToken
     );
-    producer.flush(5000, (err) => {
-      if (err) {
-        debug('Error sending messages');
-        debug(err);
-        return;
-      }
-      debug('Message sent');
-    })
-    // debug('Executed synchronously or asynchronously');
   }
 });
 
