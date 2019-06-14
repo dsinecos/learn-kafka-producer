@@ -25,6 +25,8 @@ const producer = new Kafka.Producer({
   'message.send.max.retries': 100000,
   // Configure backoff time in ms before retrying a message
   'retry.backoff.ms': 1000,
+  // Configure for consistent message ordering in the case of retries for failed messages
+  'max.in.flight.requests.per.connection': 1
 },
 {
   // Set the acknowledgement level for Kafka Producer
