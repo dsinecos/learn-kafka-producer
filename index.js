@@ -26,7 +26,11 @@ const producer = new Kafka.Producer({
   // Configure backoff time in ms before retrying a message
   'retry.backoff.ms': 1000,
   // Configure for consistent message ordering in the case of retries for failed messages
-  'max.in.flight.requests.per.connection': 1
+  'max.in.flight.requests.per.connection': 1,
+  // Configure waiting time before sending out a batch of messages
+  'linger.ms': 200,
+  // Specify the compression type to be used for messages
+  'compression.codec': 'snappy'
 },
 {
   // Set the acknowledgement level for Kafka Producer
